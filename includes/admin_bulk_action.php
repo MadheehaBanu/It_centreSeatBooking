@@ -19,12 +19,5 @@ if ($action === 'approve_all') {
     exit();
 }
 
-if ($conn->query($sql)) {
-    $affected_rows = $conn->affected_rows;
-    echo json_encode(['success' => true, 'message' => "Updated {$affected_rows} bookings."]);
-} else {
-    echo json_encode(['success' => false, 'message' => 'Failed to perform bulk action.']);
-}
-
-$conn->close();
-?>
+$stmt = $conn->exec($sql);
+echo json_encode(['success' => true, 'message' => "Updated {$stmt} bookings."]);

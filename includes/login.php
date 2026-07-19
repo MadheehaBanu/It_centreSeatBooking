@@ -23,42 +23,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $sql = "SELECT id, password FROM users WHERE email = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->execute([$email]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        if (password_verify($password, $row['password'])) {
-            $_SESSION['user_id'] = $row['id'];
-            $_SESSION['email'] = $email;
-            $_SESSION['is_admin'] = false;
-            
-            // Check if user has existing booking and redirect accordingly
-            $booking_sql = "SELECT id FROM bookings WHERE user_id = ? LIMIT 1";
-            $booking_stmt = $conn->prepare($booking_sql);
-            $booking_stmt->bind_param("i", $row['id']);
-            $booking_stmt->execute();
-            $booking_result = $booking_stmt->get_result();
-            
-            if ($booking_result->num_rows > 0) {
-                header("Location: ../status.php");
-            } else {
-                header("Location: ../booking.php");
-            }
-            $booking_stmt->close();
-            $stmt->close();
-            exit();
+    if ($row && password_verify($password, $row['password'])) {
+        $_SESSION['user_id'] = $row['id'];
+        $_SESSION['email'] = $email;
+        $_SESSION['is_admin'] = false;
+
+        $booking_stmt = $conn->prepare("SELECT id FROM bookings WHERE user_id = ? LIMIT 1");
+        $booking_stmt->execute([$row['id']]);
+        if ($booking_stmt->fetch()) {
+            header("Location: ../status.php");
         } else {
-            header("Location: ../index.php?error=wrongcredentials");
-            $stmt->close();
-            $conn->close();
-            exit();
+            header("Location: ../booking.php");
         }
+        exit();
     } else {
         header("Location: ../index.php?error=wrongcredentials");
-        $stmt->close();
-        $conn->close();
         exit();
     }
 } else {

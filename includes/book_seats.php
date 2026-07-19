@@ -17,14 +17,10 @@ if (empty($selected_seats)) {
 
 $user_id = $_SESSION['user_id'];
 
-// Check if user already has a booking (one booking per user rule)
-$sql_user_check = "SELECT seat_number FROM bookings WHERE user_id = ?";
-$stmt_user_check = $conn->prepare($sql_user_check);
-$stmt_user_check->bind_param("i", $user_id);
-$stmt_user_check->execute();
-$result_user_check = $stmt_user_check->get_result();
-
-if ($result_user_check->num_rows > 0) {
+// Check if user already has a booking
+$stmt = $conn->prepare("SELECT seat_number FROM bookings WHERE user_id = ?");
+$stmt->execute([$user_id]);
+if ($stmt->fetch()) {
     echo json_encode(['success' => false, 'message' => 'You already have a booking. Each user can only book one seat.']);
     exit();
 }
@@ -36,41 +32,32 @@ if (count($selected_seats) > 1) {
 }
 
 $placeholders = implode(',', array_fill(0, count($selected_seats), '?'));
-$types = str_repeat('i', count($selected_seats));
 
 // Check if any of the selected seats are already booked
-$sql_check = "SELECT seat_number FROM bookings WHERE seat_number IN ($placeholders)";
-$stmt_check = $conn->prepare($sql_check);
-$stmt_check->bind_param($types, ...$selected_seats);
-$stmt_check->execute();
-$result_check = $stmt_check->get_result();
-
-if ($result_check->num_rows > 0) {
+$stmt = $conn->prepare("SELECT seat_number FROM bookings WHERE seat_number IN ($placeholders)");
+$stmt->execute($selected_seats);
+if ($stmt->fetch()) {
     echo json_encode(['success' => false, 'message' => 'Selected seat is already booked.']);
     exit();
 }
 
-$sql = "INSERT INTO bookings (user_id, seat_number, status) VALUES (?, ?, 'pending')";
-$stmt = $conn->prepare($sql);
+$stmt = $conn->prepare("INSERT INTO bookings (user_id, seat_number, status) VALUES (?, ?, 'pending')");
 
-$conn->begin_transaction();
-foreach ($selected_seats as $seat) {
-    $stmt->bind_param("ii", $user_id, $seat);
-    if (!$stmt->execute()) {
-        $conn->rollback();
-        echo json_encode(['success' => false, 'message' => 'Booking failed. Please try again.']);
-        exit();
+try {
+    $conn->beginTransaction();
+    foreach ($selected_seats as $seat) {
+        $stmt->execute([$user_id, $seat]);
     }
+    $conn->commit();
+} catch (Exception $e) {
+    $conn->rollBack();
+    echo json_encode(['success' => false, 'message' => 'Booking failed. Please try again.']);
+    exit();
 }
 
-$conn->commit();
 $booking_time = date('Y-m-d H:i:s');
 echo json_encode([
     'success' => true,
     'seats' => $selected_seats,
     'booking_time' => $booking_time
 ]);
-
-$stmt->close();
-$conn->close();
-?> 
