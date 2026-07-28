@@ -17,17 +17,8 @@ require 'includes/db.php';
 $user_id = $_SESSION['user_id'];
 $sql = "SELECT seat_number, booking_time, status FROM bookings WHERE user_id = ? ORDER BY booking_time DESC LIMIT 1";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$booking = null;
-if ($row = $result->fetch_assoc()) {
-    $booking = $row;
-}
-
-$stmt->close();
-$conn->close();
+$stmt->execute([$user_id]);
+$booking = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 ?>
 <!DOCTYPE html>
 <html lang="en">

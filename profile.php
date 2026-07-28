@@ -17,17 +17,8 @@ require 'includes/db.php';
 $user_id = $_SESSION['user_id'];
 $sql = "SELECT first_name, last_name, registration_number, email, phone_number, created_at FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$user = null;
-if ($row = $result->fetch_assoc()) {
-    $user = $row;
-}
-
-$stmt->close();
-$conn->close();
+$stmt->execute([$user_id]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 ?>
 <!DOCTYPE html>
 <html lang="en">

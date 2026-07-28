@@ -13,16 +13,9 @@ $sql = "SELECT b.id, b.seat_number, b.booking_time, b.status,
         FROM bookings b 
         JOIN users u ON b.user_id = u.id 
         ORDER BY b.booking_time DESC";
-$result = $conn->query($sql);
-$bookings = [];
-
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $bookings[] = $row;
-    }
-}
-
-$conn->close();
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
