@@ -1,105 +1,114 @@
-function fetchMyBookings() {
-    fetch('includes/my_bookings.php')
-        .then(response => response.json())
-        .then(bookings => {
-            const myBookingsDiv = document.getElementById('my-bookings');
-            if (bookings.length === 0) {
-                myBookingsDiv.textContent = 'You have no bookings yet.';
-            } else {
-                const seatList = bookings.map(b => b.seat_number).join(', ');
-                myBookingsDiv.innerHTML = `<strong>Your booked seat(s):</strong> ${seatList}`;
-            }
-        });
-}
+document.addEventListener('DOMContentLoaded', function () {
+    const seats        = document.querySelectorAll('.seat');
+    const btnBook      = document.getElementById('btn-book');
+    const btnCancel    = document.getElementById('btn-cancel');
+    const selectedLabel = document.getElementById('selected-label');
+    let selectedSeat   = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    const seats = document.querySelectorAll('.seat');
-    const bookButton = document.querySelector('.btn-book');
-    const cancelButton = document.querySelector('.btn-cancel');
-    let selectedSeats = [];
+    // ── Toast helper ──────────────────────────────────────────────
+    function showToast(msg, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = 'toast' + (type ? ' toast-' + type : '');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
 
-    // Check if user already has a booking
+    // ── Redirect if user already has a booking ────────────────────
     fetch('includes/my_bookings.php')
-        .then(response => response.json())
+        .then(r => r.json())
         .then(bookings => {
             if (bookings.length > 0) {
-                // User already has a booking, redirect to status page
                 window.location.href = 'status.php';
                 return;
             }
-            
-            // Continue with normal booking page functionality
-            fetchMyBookings();
-            
-            // Fetch and update seat status on page load
-            fetch('includes/get_bookings.php')
-                .then(response => response.json())
-                .then(bookedSeats => {
-                    seats.forEach(seat => {
-                        const seatNumber = seat.dataset.seatNumber;
-                        if (bookedSeats.includes(parseInt(seatNumber))) {
-                            seat.classList.add('booked');
-                        }
-                    });
-                });
+            loadBookedSeats();
         })
-        .catch(error => {
-            console.error('Error checking user bookings:', error);
-        });
+        .catch(() => loadBookedSeats());
 
+    // ── Load booked seats from server ─────────────────────────────
+    function loadBookedSeats() {
+        fetch('includes/get_bookings.php')
+            .then(r => r.json())
+            .then(bookedSeats => {
+                seats.forEach(seat => {
+                    if (bookedSeats.includes(parseInt(seat.dataset.seatNumber))) {
+                        seat.classList.add('booked');
+                        seat.disabled = true;
+                        seat.setAttribute('aria-disabled', 'true');
+                    }
+                });
+            })
+            .catch(() => showToast('Could not load seat availability.', 'error'));
+    }
+
+    // ── Seat selection ────────────────────────────────────────────
     seats.forEach(seat => {
         seat.addEventListener('click', () => {
-            if (!seat.classList.contains('booked')) {
-                const seatNumber = parseInt(seat.dataset.seatNumber);
-                
-                // If this seat is already selected, deselect it
-                if (seat.classList.contains('selected')) {
-                    seat.classList.remove('selected');
-                    selectedSeats = selectedSeats.filter(s => s !== seatNumber);
-                } else {
-                    // Deselect all other seats (only one seat allowed)
-                    seats.forEach(s => s.classList.remove('selected'));
-                    selectedSeats = [];
-                    
-                    // Select this seat
-                    seat.classList.add('selected');
-                    selectedSeats.push(seatNumber);
-                }
+            if (seat.classList.contains('booked')) return;
+
+            const num = parseInt(seat.dataset.seatNumber);
+
+            if (seat.classList.contains('selected')) {
+                seat.classList.remove('selected');
+                selectedSeat = null;
+            } else {
+                seats.forEach(s => s.classList.remove('selected'));
+                seat.classList.add('selected');
+                selectedSeat = num;
             }
+
+            updateUI();
         });
     });
 
-    bookButton.addEventListener('click', () => {
-        if (selectedSeats.length > 0) {
-            fetch('includes/book_seats.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ seats: selectedSeats })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Redirect to status page instead of showing modal
-                    window.location.href = 'status.php';
-                } else {
-                    alert('Booking failed: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while booking. Please try again.');
-            });
+    function updateUI() {
+        if (selectedSeat) {
+            selectedLabel.textContent = 'Seat ' + selectedSeat;
+            btnBook.disabled = false;
         } else {
-            alert('Please select a seat.');
+            selectedLabel.textContent = '';
+            btnBook.disabled = true;
         }
-    });
+    }
 
-    cancelButton.addEventListener('click', () => {
-        selectedSeats = [];
-        seats.forEach(seat => {
-            seat.classList.remove('selected');
+    // ── Book Now ──────────────────────────────────────────────────
+    btnBook.addEventListener('click', () => {
+        if (!selectedSeat || btnBook.classList.contains('loading')) return;
+
+        btnBook.classList.add('loading');
+        btnBook.textContent = 'Booking…';
+        btnBook.disabled = true;
+
+        fetch('includes/book_seats.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seats: [selectedSeat] })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Seat ' + selectedSeat + ' booked!', 'success');
+                setTimeout(() => { window.location.href = 'status.php'; }, 800);
+            } else {
+                showToast(data.message || 'Booking failed.', 'error');
+                btnBook.classList.remove('loading');
+                btnBook.textContent = 'Book Now';
+                btnBook.disabled = false;
+            }
+        })
+        .catch(() => {
+            showToast('An error occurred. Please try again.', 'error');
+            btnBook.classList.remove('loading');
+            btnBook.textContent = 'Book Now';
+            btnBook.disabled = false;
         });
     });
-}); 
+
+    // ── Clear selection ───────────────────────────────────────────
+    btnCancel.addEventListener('click', () => {
+        seats.forEach(s => s.classList.remove('selected'));
+        selectedSeat = null;
+        updateUI();
+    });
+});

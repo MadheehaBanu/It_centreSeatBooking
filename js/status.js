@@ -1,103 +1,78 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const closeBtn = document.getElementById('close-btn');
-    const cancelBookingBtn = document.getElementById('cancel-booking-btn');
-    const qrcodeDiv = document.getElementById('qrcode');
-    
-    // Generate QR code if booking exists and is approved
-    if (qrcodeDiv) {
-        fetch('includes/my_bookings.php')
-            .then(response => response.json())
-            .then(bookings => {
-                if (bookings.length > 0) {
-                    const booking = bookings[0];
-                    // Only generate QR code for approved bookings
-                    if (booking.status === 'approved') {
-                        fetch('includes/get_user_email.php')
-                            .then(response => response.json())
-                            .then(user => {
-                                const qrText = `UniSpace Booking\nEmail: ${user.email}\nSeat: ${booking.seat_number}\nTime: ${booking.booking_time}`;
-                                
-                                // Check if QRCode library is available
-                                if (typeof QRCode !== 'undefined') {
-                                    new QRCode(qrcodeDiv, {
-                                        text: qrText,
-                                        width: 200,
-                                        height: 200,
-                                        colorDark: "#000000",
-                                        colorLight: "#ffffff",
-                                        correctLevel: QRCode.CorrectLevel.M
-                                    });
-                                } else {
-                                    // Fallback if QRCode library is not available
-                                    qrcodeDiv.innerHTML = '<div style="width: 200px; height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; text-align: center;">QR Code<br>Generation<br>Unavailable</div>';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching user email:', error);
-                            });
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching bookings:', error);
-            });
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Toast helper ──────────────────────────────────────────────
+    function showToast(msg, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = 'toast' + (type ? ' toast-' + type : '');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3500);
     }
-    
-    // Cancel booking functionality
-    if (cancelBookingBtn) {
-        cancelBookingBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to cancel your booking? This action cannot be undone.')) {
-                fetch('includes/cancel_booking.php', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Booking cancelled successfully!');
-                        window.location.href = 'booking.php';
-                    } else {
-                        alert('Failed to cancel booking: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error cancelling booking:', error);
-                    alert('An error occurred while cancelling the booking.');
+
+    // ── QR code generation ────────────────────────────────────────
+    const qrcodeDiv = document.getElementById('qrcode');
+    if (qrcodeDiv) {
+        Promise.all([
+            fetch('includes/my_bookings.php').then(r => r.json()),
+            fetch('includes/get_user_email.php').then(r => r.json())
+        ])
+        .then(([bookings, user]) => {
+            if (!bookings.length) return;
+            const b = bookings[0];
+            if (b.status !== 'approved') return;
+
+            const qrText = `UniSpace\nEmail: ${user.email}\nSeat: ${b.seat_number}\nBooked: ${b.booking_time}`;
+
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(qrcodeDiv, {
+                    text: qrText,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#1e1e2e',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
                 });
+            } else {
+                qrcodeDiv.innerHTML = '<p style="color:#6c757d;font-size:0.875rem;">QR unavailable</p>';
             }
+        })
+        .catch(() => {
+            if (qrcodeDiv) qrcodeDiv.innerHTML = '<p style="color:#6c757d;font-size:0.875rem;">QR unavailable</p>';
         });
     }
-    
-    // Close button functionality
-    closeBtn.addEventListener('click', function() {
-        // Show confirmation dialog
-        if (confirm('Are you sure you want to close and return to the login page?')) {
-            // Log out the user and redirect to login
-            fetch('includes/logout.php', {
-                method: 'POST'
-            })
-            .then(() => {
-                window.location.href = 'index.php';
-            })
-            .catch(error => {
-                console.error('Error logging out:', error);
-                // Redirect anyway
-                window.location.href = 'index.php';
-            });
-        }
-    });
-    
-    // Auto-refresh booking status every 30 seconds
-    setInterval(function() {
-        fetch('includes/my_bookings.php')
-            .then(response => response.json())
-            .then(bookings => {
-                // If user no longer has bookings, redirect to booking page
-                if (bookings.length === 0) {
-                    window.location.href = 'booking.php';
-                }
-            })
-            .catch(error => {
-                console.error('Error checking booking status:', error);
-            });
-    }, 30000);
+
+    // ── Cancel booking ────────────────────────────────────────────
+    const cancelBtn = document.getElementById('cancel-booking-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            if (!confirm('Cancel your booking? This cannot be undone.')) return;
+
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Cancelling…';
+
+            fetch('includes/cancel_booking.php', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Booking cancelled.', 'success');
+                        setTimeout(() => { window.location.href = 'booking.php'; }, 900);
+                    } else {
+                        showToast(data.message || 'Failed to cancel.', 'error');
+                        cancelBtn.disabled = false;
+                        cancelBtn.textContent = 'Cancel Booking';
+                    }
+                })
+                .catch(() => {
+                    showToast('An error occurred. Please try again.', 'error');
+                    cancelBtn.disabled = false;
+                    cancelBtn.textContent = 'Cancel Booking';
+                });
+        });
+    }
+
+    // ── Auto-refresh every 30s if status is pending ───────────────
+    const isPending = document.querySelector('.status-banner-pending');
+    if (isPending) {
+        setTimeout(() => location.reload(), 30000);
+    }
 });

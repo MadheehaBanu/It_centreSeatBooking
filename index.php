@@ -26,28 +26,26 @@ if (isset($_SESSION['user_id'])) {
                 <img src="images/logo-main.png" alt="Logo" class="logo">
                 <h2>Reserve your IT workspace easily</h2>
                 <h3>Nice to see you again</h3>
-                <?php if(isset($_GET['error'])): ?>
+                <?php if (isset($_GET['signup']) && $_GET['signup'] === 'success'): ?>
+                <div class="success-message">Account created! You can now sign in.</div>
+                <?php endif; ?>
+                <?php if (isset($_GET['error'])): ?>
                 <div class="error-message">
-                    <?php 
-                    switch($_GET['error']) {
-                        case 'emptyfields':
-                            echo "Please fill in all fields";
-                            break;
-                        case 'wrongcredentials':
-                            echo "Invalid email or password";
-                            break;
-                        default:
-                            echo "An error occurred. Please try again.";
+                    <?php
+                    switch ($_GET['error']) {
+                        case 'emptyfields': echo 'Please fill in all fields.'; break;
+                        case 'wrongcredentials': echo 'Invalid email or password.'; break;
+                        default: echo 'An error occurred. Please try again.';
                     }
                     ?>
                 </div>
                 <?php endif; ?>
                 <form action="includes/login.php" method="post">
-                    <label for="email">Login</label>
-                    <input type="text" id="email" name="email" placeholder="Email or phone number" required>
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required>
                     <label for="password">Password</label>
                     <div class="password-container">
-                        <input type="password" id="password" name="password" placeholder="Enter password" required>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
                         <span class="password-toggle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
@@ -60,7 +58,7 @@ if (isset($_SESSION['user_id'])) {
                         <a href="#">Forgot password?</a>
                     </div>
                     <button type="submit" class="btn-signin">Sign in</button>
-                    <p class="signup-link">Dont have an account? <a href="signup.php">Sign up now</a></p>
+                    <p class="signup-link">Don't have an account? <a href="signup.php">Sign up now</a></p>
                 </form>
             </div>
         </div>
