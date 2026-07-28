@@ -12,6 +12,7 @@
    - Start Apache and MySQL services from the XAMPP Control Panel
 
 2. **Import the Database**
+
    - Option 1: Using phpMyAdmin
      - Open your browser and navigate to `http://localhost/phpmyadmin`
      - Click on the "Import" tab at the top of the page
@@ -76,3 +77,32 @@ The database includes sample user data with the following credentials:
 - If you encounter issues with the signup or login process:
   - Check that the `users` table structure matches the expected fields
   - Verify that the database connection in `includes/db.php` is correct
+
+---
+
+## Run locally (no XAMPP / Docker)
+
+If XAMPP or Docker aren't available on your machine you can run the app locally using PHP's built-in server and a file-based SQLite database.
+
+1) Create the SQLite database (from repo root):
+
+```bash
+php scripts/init_sqlite.php
+```
+
+2) Start the PHP built-in server:
+
+```bash
+php -S localhost:8000
+```
+
+3) Open in your browser:
+
+```
+http://localhost:8000/index.php
+```
+
+Notes:
+- includes/db.php will use data/unispace.sqlite when present.
+- If you prefer a server DB, edit includes/db.php to match your environment.
+- If you get login issues, the sample passwords in the DB are bcrypt hashes of the string `password`.
