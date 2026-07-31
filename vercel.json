@@ -1,8 +1,3 @@
 {
-  "framework": "php",
-  "buildCommand": "mkdir -p data",
-  "env": {
-    "DATABASE_TYPE": "sqlite",
-    "DATABASE_PATH": "/data/unispace.sqlite"
-  }
+  "buildCommand": "mkdir -p data"
 }
