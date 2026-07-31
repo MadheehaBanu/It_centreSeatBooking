@@ -1,3 +1,7 @@
 {
-  "outputDirectory": "."
+  "functions": {
+    "*.php": {
+      "runtime": "php-8.2"
+    }
+  }
 }
