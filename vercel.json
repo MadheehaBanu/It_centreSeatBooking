@@ -1,8 +1,5 @@
 {
   "framework": "php",
-  "php": {
-    "version": "8.2"
-  },
   "buildCommand": "mkdir -p data",
   "env": {
     "DATABASE_TYPE": "sqlite",
