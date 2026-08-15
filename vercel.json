@@ -2,7 +2,7 @@
   "buildCommand": "mkdir -p /tmp/cache data",
   "functions": {
     "*.php": {
-      "runtime": "php-8.2"
+      "runtime": "vercel-php@0.9.0"
     }
   },
   "routes": [
