@@ -5,12 +5,12 @@
       "runtime": "php-8.2"
     }
   },
-  "services": [
-    {
+  "services": {
+    "php": {
       "src": "/(.*)",
       "use": "@vercel/php"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
